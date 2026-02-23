@@ -22,6 +22,6 @@ export default tseslint.config(
         },
     },
     {
-        ignores: ['dist/**', 'node_modules/**', '.eslintrc.json'],
+        ignores: ['dist/**', 'node_modules/**', '.eslintrc.json', 'eslint.config.mjs'],
     }
 );

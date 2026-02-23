@@ -1,42 +1,60 @@
+import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from 'path';
 
+// Load .env file
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const env = {
-  NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: parseInt(process.env.PORT || '5000', 10),
+const envSchema = z.object({
+  // Server
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z
+    .string()
+    .transform((val) => parseInt(val, 10))
+    .default('5000'),
 
   // Database
-  MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/onlyhair',
+  MONGO_URI: z.string().url({ message: 'MONGO_URI must be a valid URL' }),
+  REDIS_URL: z.string().url({ message: 'REDIS_URL must be a valid URL' }),
 
-  // JWT
-  JWT_SECRET: process.env.JWT_SECRET || 'fallback_secret',
-  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
-  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'fallback_refresh_secret',
-  JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+  // Auth (RSA Keys)
+  JWT_PRIVATE_KEY: z.string().min(1, { message: 'JWT_PRIVATE_KEY is required' }),
+  JWT_PUBLIC_KEY: z.string().min(1, { message: 'JWT_PUBLIC_KEY is required' }),
 
-  // Redis
-  REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
+  // AWS
+  AWS_ACCESS_KEY: z.string().min(1, { message: 'AWS_ACCESS_KEY is required' }),
+  AWS_SECRET_KEY: z.string().min(1, { message: 'AWS_SECRET_KEY is required' }),
+  AWS_REGION: z.string().default('ap-south-1'),
+  AWS_S3_BUCKET: z.string().optional(),
 
-  // AWS S3
-  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
-  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || '',
-  AWS_REGION: process.env.AWS_REGION || 'ap-south-1',
-  AWS_S3_BUCKET: process.env.AWS_S3_BUCKET || 'onlyhair-assets',
+  // Payments
+  RAZORPAY_KEY_ID: z.string().min(1, { message: 'RAZORPAY_KEY_ID is required' }),
+  RAZORPAY_SECRET: z.string().min(1, { message: 'RAZORPAY_SECRET is required' }),
 
   // Rate Limiting
-  RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
-  RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+  RATE_LIMIT_WINDOW_MS: z
+    .string()
+    .transform((val) => parseInt(val, 10))
+    .default('900000'),
+  RATE_LIMIT_MAX: z
+    .string()
+    .transform((val) => parseInt(val, 10))
+    .default('100'),
 
-  // CORS
-  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
+  // Client
+  CLIENT_URL: z.string().url().default('http://localhost:3000'),
+});
 
-  // Email
-  SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
-  SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
-  SMTP_USER: process.env.SMTP_USER || '',
-  SMTP_PASS: process.env.SMTP_PASS || '',
-};
+// Validate process.env
+const _env = envSchema.safeParse(process.env);
+
+if (!_env.success) {
+  console.error('❌ Invalid environment variables:');
+  console.error(JSON.stringify(_env.error.format(), null, 2));
+  process.exit(1);
+}
+
+const env = _env.data;
 
 export default env;
+export type EnvConfig = z.infer<typeof envSchema>;
