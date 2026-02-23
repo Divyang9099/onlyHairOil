@@ -1,0 +1,3 @@
+// Controllers — request handlers go here
+// Each controller should use catchAsync from utils/response.ts
+export {};
