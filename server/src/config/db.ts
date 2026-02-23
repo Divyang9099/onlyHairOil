@@ -12,6 +12,15 @@ const connectDB = async (): Promise<void> => {
   }
 };
 
+export const closeDB = async (): Promise<void> => {
+  try {
+    await mongoose.connection.close();
+    logger.info('MongoDB connection closed through graceful shutdown');
+  } catch (error) {
+    logger.error(error, 'Error during MongoDB disconnection');
+  }
+};
+
 mongoose.connection.on('disconnected', () => {
   logger.warn('MongoDB disconnected. Attempting to reconnect...');
 });

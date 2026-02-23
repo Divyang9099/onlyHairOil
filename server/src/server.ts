@@ -1,5 +1,5 @@
 import app from './app';
-import connectDB from './config/db';
+import connectDB, { closeDB } from './config/db';
 import redis from './config/redis';
 import env from './config/env';
 import logger from './utils/logger';
@@ -20,6 +20,7 @@ const startServer = async () => {
       logger.warn(`${signal} received. Starting graceful shutdown...`);
       server.close(async () => {
         logger.info('HTTP server closed');
+        await closeDB();
         await redis.quit();
         logger.info('Redis connection closed');
         process.exit(0);
