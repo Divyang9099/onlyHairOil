@@ -43,6 +43,9 @@ const envSchema = z.object({
 
   // Client
   CLIENT_URL: z.string().url().default('http://localhost:3000'),
+
+  // Monitoring
+  SENTRY_DSN: z.string().url().optional(),
 });
 
 // Validate process.env

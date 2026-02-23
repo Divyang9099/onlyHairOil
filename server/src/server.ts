@@ -1,4 +1,9 @@
 import './config/dns-override';
+import { initSentry } from './config/sentry';
+
+// Initialize Sentry before everything else (if DSN is configured)
+initSentry();
+
 import app from './app';
 import connectDB, { closeDB } from './config/db';
 import redis from './config/redis';
@@ -6,44 +11,50 @@ import env from './config/env';
 import logger from './utils/logger';
 
 const startServer = async () => {
-  logger.info(`Starting server on port ${env.PORT}...`);
+  logger.info({ port: env.PORT, env: env.NODE_ENV }, 'Starting server...');
+
   try {
-    // Connect to MongoDB
     await connectDB();
 
-    // Start HTTP server
     const server = app.listen(env.PORT, () => {
-      logger.info(`🚀 Server running in ${env.NODE_ENV} mode on http://localhost:${env.PORT}`);
-      logger.info(`📋 Health check: http://localhost:${env.PORT}/health`);
+      logger.info(
+        { url: `http://localhost:${env.PORT}`, health: `http://localhost:${env.PORT}/health` },
+        '🚀 Server running',
+      );
     });
 
-    // ─── Graceful Shutdown ───────────────────────────────────────────────────
+    // ── Graceful Shutdown ──────────────────────────────────────────────────────
     const gracefulShutdown = async (signal: string) => {
-      logger.warn(`${signal} received. Starting graceful shutdown...`);
+      logger.warn({ signal }, 'Shutdown signal received, closing gracefully...');
       server.close(async () => {
         logger.info('HTTP server closed');
         await closeDB();
         await redis.quit();
-        logger.info('Redis connection closed');
+        logger.info('All connections closed. Exiting.');
         process.exit(0);
       });
+
+      // Force kill after 10s
+      setTimeout(() => {
+        logger.error('Graceful shutdown timed out. Forcing exit.');
+        process.exit(1);
+      }, 10_000);
     };
 
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-    // ─── Unhandled Rejections ────────────────────────────────────────────────
-    process.on('unhandledRejection', (err: Error) => {
-      logger.error(err, 'UNHANDLED REJECTION');
+    process.on('unhandledRejection', (reason: unknown) => {
+      logger.error({ reason }, 'UNHANDLED REJECTION');
       server.close(() => process.exit(1));
     });
 
     process.on('uncaughtException', (err: Error) => {
-      logger.error(err, 'UNCAUGHT EXCEPTION');
+      logger.error({ err }, 'UNCAUGHT EXCEPTION');
       process.exit(1);
     });
   } catch (error) {
-    logger.error(error as Error, 'Failed to start server');
+    logger.error({ error }, 'Failed to start server');
     process.exit(1);
   }
 };
