@@ -1,3 +1,4 @@
+import './config/dns-override';
 import app from './app';
 import connectDB, { closeDB } from './config/db';
 import redis from './config/redis';
@@ -5,6 +6,7 @@ import env from './config/env';
 import logger from './utils/logger';
 
 const startServer = async () => {
+  logger.info(`Starting server on port ${env.PORT}...`);
   try {
     // Connect to MongoDB
     await connectDB();

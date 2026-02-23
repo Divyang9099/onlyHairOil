@@ -14,8 +14,8 @@ const envSchema = z.object({
     .default('5000'),
 
   // Database
-  MONGO_URI: z.string().url({ message: 'MONGO_URI must be a valid URL' }),
-  REDIS_URL: z.string().url({ message: 'REDIS_URL must be a valid URL' }),
+  MONGO_URI: z.string().min(1, { message: 'MONGO_URI is required' }),
+  REDIS_URL: z.string().min(1, { message: 'REDIS_URL is required' }),
 
   // Auth (RSA Keys)
   JWT_PRIVATE_KEY: z.string().min(1, { message: 'JWT_PRIVATE_KEY is required' }),
